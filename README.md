@@ -6,139 +6,105 @@
 
 <style>
 body {
-  margin: 0;
-  background: transparent;
-  font-family: Arial, sans-serif;
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: transparent;
 }
 
 #overlay {
-  width: 300px;
-  padding: 15px;
-  background: rgba(0,0,0,0.6);
-  border-radius: 15px;
-  color: white;
+    width: 300px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 15px;
+    padding: 15px;
+    color: white;
 }
 
 h2 {
-  text-align: center;
-  margin-bottom: 10px;
+    text-align: center;
+    margin-bottom: 10px;
 }
 
-.user {
-  display: flex;
-  justify-content: space-between;
-  margin: 5px 0;
-  font-size: 16px;
+.donator {
+    display: flex;
+    justify-content: space-between;
+    padding: 5px;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+}
+
+.rank {
+    font-weight: bold;
+    margin-right: 10px;
 }
 
 button {
-  margin-top: 10px;
-  width: 100%;
-  padding: 8px;
-  border: none;
-  border-radius: 10px;
-  background: red;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px;
+    border: none;
+    border-radius: 10px;
+    background: red;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
 }
 </style>
+
 </head>
 
 <body>
 
 <div id="overlay">
-  <h2>🏆 Top Donateurs</h2>
-  <div id="list"></div>
-  <button onclick="resetScores()">RESET</button>
+    <h2>🏆 Top Donateurs</h2>
+    <div id="list"></div>
+    <button onclick="resetScores()">RESET</button>
 </div>
 
 <script>
-// =======================
-// CONFIG
-// =======================
-const WS_URL = "ws://localhost:21213"; // TikFinity WebSocket
 
-// =======================
-// DATA
-// =======================
-let scores = {};
+// STOCKAGE DONATEURS
+let donors = {};
 
-// =======================
-// LOAD SAVE
-// =======================
-if(localStorage.getItem("scores")){
-  scores = JSON.parse(localStorage.getItem("scores"));
-}
-
-// =======================
-// DISPLAY
-// =======================
-function updateDisplay() {
-  const list = document.getElementById("list");
-
-  const sorted = Object.entries(scores)
-    .sort((a,b) => b[1] - a[1])
-    .slice(0,5);
-
-  list.innerHTML = "";
-
-  sorted.forEach(([name, score], index) => {
-    const div = document.createElement("div");
-    div.className = "user";
-    div.innerHTML = `<span>#${index+1} ${name}</span><span>${score}</span>`;
-    list.appendChild(div);
-  });
-
-  localStorage.setItem("scores", JSON.stringify(scores));
-}
-
-// =======================
-// RESET
-// =======================
-function resetScores(){
-  scores = {};
-  updateDisplay();
-}
-
-// =======================
-// WEBSOCKET (TikFinity)
-// =======================
-const socket = new WebSocket(WS_URL);
-
-socket.onopen = () => {
-  console.log("Connecté à TikFinity");
-};
-
-socket.onmessage = (event) => {
-  const data = JSON.parse(event.data);
-
-  // Event cadeau
-  if(data.event === "gift") {
-
-    const username = data.username;
-    const giftValue = data.diamondCount || 1; // valeur TikTok
-
-    if(!scores[username]){
-      scores[username] = 0;
+// AJOUT DON (1 pièce = 1 point)
+function addDonation(name, coins) {
+    if (!donors[name]) {
+        donors[name] = 0;
     }
-
-    scores[username] += giftValue;
-
+    donors[name] += coins;
     updateDisplay();
-  }
-};
+}
 
-socket.onerror = (err) => {
-  console.log("Erreur WS :", err);
-};
+// AFFICHAGE TOP 5
+function updateDisplay() {
+    let sorted = Object.entries(donors)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5);
 
-socket.onclose = () => {
-  console.log("Déconnecté");
-};
+    let html = "";
 
-// INIT
-updateDisplay();
+    sorted.forEach((d, index) => {
+        html += `
+        <div class="donator">
+            <span class="rank">#${index + 1} ${d[0]}</span>
+            <span>${d[1]} pts</span>
+        </div>`;
+    });
+
+    document.getElementById("list").innerHTML = html;
+}
+
+// RESET
+function resetScores() {
+    donors = {};
+    updateDisplay();
+}
+
+// 🔥 TEST (tu peux supprimer après)
+addDonation("Julie", 10);
+addDonation("Max", 25);
+addDonation("Lucas", 5);
+addDonation("Emma", 40);
+addDonation("Noah", 15);
+
 </script>
 
 </body>
