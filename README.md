@@ -2,100 +2,143 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Top Donateurs MVP</title>
+<title>Top Donateurs</title>
 
 <style>
 body {
-    margin: 0;
-    background: transparent;
-    font-family: Arial;
+  margin: 0;
+  background: transparent;
+  font-family: Arial, sans-serif;
 }
 
-#box {
-    position: absolute;
-    top: 50px;
-    right: 50px;
-    width: 300px;
-    background: rgba(0,0,0,0.6);
-    border: 2px solid purple;
-    border-radius: 15px;
-    padding: 15px;
-    color: white;
+#overlay {
+  width: 300px;
+  padding: 15px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 15px;
+  color: white;
 }
 
 h2 {
-    text-align: center;
-    color: violet;
+  text-align: center;
+  margin-bottom: 10px;
 }
 
 .user {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
+  display: flex;
+  justify-content: space-between;
+  margin: 5px 0;
+  font-size: 16px;
 }
 
 button {
-    margin-top: 10px;
-    width: 100%;
-    background: purple;
-    color: white;
-    border: none;
-    padding: 5px;
-    border-radius: 10px;
-    cursor: pointer;
+  margin-top: 10px;
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 10px;
+  background: red;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
 }
 </style>
 </head>
 
 <body>
 
-<div id="box">
-    <h2>🏆 TOP 5</h2>
-    <div id="list"></div>
-    <button onclick="resetData()">RESET</button>
+<div id="overlay">
+  <h2>🏆 Top Donateurs</h2>
+  <div id="list"></div>
+  <button onclick="resetScores()">RESET</button>
 </div>
 
 <script>
-let socket = new WebSocket("ws://localhost:21213/");
-let donors = {};
+// =======================
+// CONFIG
+// =======================
+const WS_URL = "ws://localhost:21213"; // TikFinity WebSocket
 
-socket.onmessage = (event) => {
-    let data = JSON.parse(event.data);
+// =======================
+// DATA
+// =======================
+let scores = {};
 
-    if (data.event === "gift") {
-        let user = data.username;
-        let amount = data.diamondCount || 1;
+// =======================
+// LOAD SAVE
+// =======================
+if(localStorage.getItem("scores")){
+  scores = JSON.parse(localStorage.getItem("scores"));
+}
 
-        if (!donors[user]) donors[user] = 0;
-        donors[user] += amount;
+// =======================
+// DISPLAY
+// =======================
+function updateDisplay() {
+  const list = document.getElementById("list");
 
-        updateUI();
-    }
+  const sorted = Object.entries(scores)
+    .sort((a,b) => b[1] - a[1])
+    .slice(0,5);
+
+  list.innerHTML = "";
+
+  sorted.forEach(([name, score], index) => {
+    const div = document.createElement("div");
+    div.className = "user";
+    div.innerHTML = `<span>#${index+1} ${name}</span><span>${score}</span>`;
+    list.appendChild(div);
+  });
+
+  localStorage.setItem("scores", JSON.stringify(scores));
+}
+
+// =======================
+// RESET
+// =======================
+function resetScores(){
+  scores = {};
+  updateDisplay();
+}
+
+// =======================
+// WEBSOCKET (TikFinity)
+// =======================
+const socket = new WebSocket(WS_URL);
+
+socket.onopen = () => {
+  console.log("Connecté à TikFinity");
 };
 
-function updateUI() {
-    let sorted = Object.entries(donors)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 5);
+socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
 
-    let html = "";
-    sorted.forEach((d, i) => {
-        html += `<div class="user">#${i+1} ${d[0]} <span>${d[1]}</span></div>`;
-    });
+  // Event cadeau
+  if(data.event === "gift") {
 
-    document.getElementById("list").innerHTML = html;
-}
+    const username = data.username;
+    const giftValue = data.diamondCount || 1; // valeur TikTok
 
-function resetData() {
-    donors = {};
-    updateUI();
-}
+    if(!scores[username]){
+      scores[username] = 0;
+    }
 
-// 🔥 RESET AUTO (toutes les 10 minutes)
-setInterval(() => {
-    donors = {};
-    updateUI();
-}, 10 * 60 * 1000);
+    scores[username] += giftValue;
+
+    updateDisplay();
+  }
+};
+
+socket.onerror = (err) => {
+  console.log("Erreur WS :", err);
+};
+
+socket.onclose = () => {
+  console.log("Déconnecté");
+};
+
+// INIT
+updateDisplay();
 </script>
 
 </body>
