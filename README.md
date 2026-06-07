@@ -98,12 +98,7 @@ function resetScores() {
     updateDisplay();
 }
 
-// 🔥 TEST (tu peux supprimer après)
-addDonation("Julie", 10);
-addDonation("Max", 25);
-addDonation("Lucas", 5);
-addDonation("Emma", 40);
-addDonation("Noah", 15);
+
 
 </script>
 
